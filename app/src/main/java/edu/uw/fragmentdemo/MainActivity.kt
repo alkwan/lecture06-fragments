@@ -1,6 +1,7 @@
 package edu.uw.fragmentdemo
 
 import android.os.Bundle
+import android.support.v4.app.FragmentTransaction
 import android.support.v7.app.AppCompatActivity
 import android.util.Log
 import android.view.View
@@ -16,7 +17,7 @@ import java.io.UnsupportedEncodingException
 import java.net.URLEncoder
 
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), MovieListFragment.OnMovieSelectedListener {
 
     private val TAG = "MainActivity"
 
@@ -25,16 +26,6 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-
-        adapter = ArrayAdapter(this, R.layout.list_item, R.id.txt_item, ArrayList())
-
-        val listView = findViewById<ListView>(R.id.list_view)
-        listView.adapter = adapter
-
-        listView.onItemClickListener = AdapterView.OnItemClickListener { parent, view, position, id ->
-            val movie = parent.getItemAtPosition(position) as Movie
-            Log.v(TAG, "You clicked on: $movie")
-        }
     }
 
     //respond to search button clicking
@@ -42,50 +33,23 @@ class MainActivity : AppCompatActivity() {
         val searchEdit = findViewById<EditText>(R.id.txt_search)
         val searchTerm = searchEdit.text.toString()
 
-        downloadMovieData(searchTerm)
+        // create a fragment
+        val fragment = MovieListFragment.newInstance(searchTerm)
+
+        // show it on the screen
+        val ft: FragmentTransaction = supportFragmentManager.beginTransaction()
+        ft.replace(R.id.container, fragment, "MOVIE_LIST_FRAGMENT")
+        // have remove, replace... etc.
+        // to execute it and make it occur, you have to commit the transaction
+        ft.commit()
     }
 
+    override fun onMovieSelected(movie: Movie) {
+        val details = DetailFragment.newInstance(movie.title, movie.description)
+        supportFragmentManager.beginTransaction()
+                .replace(R.id.container, details, "MOVIE_DETAILS_FRAGMENT")
+                .addToBackStack(null)
+                .commit()
 
-    //download media information from iTunes
-    private fun downloadMovieData(searchTerm: String) {
-        var urlString = ""
-        try {
-            urlString = "https://itunes.apple.com/search?term=" + URLEncoder.encode(searchTerm, "UTF-8") + "&media=movie&entity=movie&limit=25"
-            //Log.v(TAG, urlString);
-        } catch (uee: UnsupportedEncodingException) {
-            Log.e(TAG, uee.toString())
-            return
-        }
-
-        val request = JsonObjectRequest(Request.Method.GET, urlString, null,
-                Response.Listener { response ->
-                    val movies = ArrayList<Movie>()
-
-                    try {
-                        //parse the JSON results
-                        val results = response.getJSONArray("results") //get array from "search" key
-                        for (i in 0 until results.length()) {
-                            val track = results.getJSONObject(i)
-                            if (track.getString("wrapperType") != "track")
-                            //skip non-track results
-                                continue
-                            val title = track.getString("trackName")
-                            val year = track.getString("releaseDate")
-                            val description = track.getString("longDescription")
-                            val url = track.getString("trackViewUrl")
-                            val movie = Movie(title, year, description, url)
-                            movies.add(movie)
-                        }
-                    } catch (e: JSONException) {
-                        e.printStackTrace()
-                    }
-
-                    adapter.clear()
-                    for (movie in movies) {
-                        adapter.add(movie)
-                    }
-                }, Response.ErrorListener { error -> Log.e(TAG, error.toString()) })
-
-        VolleyService.getInstance(this).add(request)
     }
 }

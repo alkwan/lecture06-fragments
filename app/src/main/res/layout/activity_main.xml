@@ -33,10 +33,10 @@
             />
     </LinearLayout>
 
-    <ListView
-        android:id="@+id/list_view"
+    <FrameLayout
+        android:id="@+id/container"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_below="@id/input_layout"
-        />
+        android:layout_below="@id/input_layout">
+    </FrameLayout>
 </RelativeLayout>
